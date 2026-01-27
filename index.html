@@ -24,6 +24,10 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 2.5rem; }
+        
+        /* Fade in animation */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 overflow-x-hidden min-h-screen">
@@ -60,6 +64,7 @@
             CheckCircle: (props) => <Icon {...props} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />,
             Plus: (props) => <Icon {...props} path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />,
             Trash: (props) => <Icon {...props} path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />,
+            CloudCheck: (props) => <Icon {...props} path={<><path d="M20 16.2A4.5 4.5 0 0 0 21.4 8H21a6 6 0 0 0-11.7-1.8 4.5 4.5 0 0 0-3.3 8.3"/><polyline points="9 11 12 14 22 4"/></>} />,
         };
 
         // --- Logic ---
@@ -396,7 +401,10 @@
             const fetchSheetData = async (url) => {
                 const targetUrl = url || scriptUrl;
                 if (!targetUrl) return;
-                setLoading(true);
+                
+                // Show loading only if no cache data exists or explicit refresh
+                if (cars.length === 0) setLoading(true);
+                
                 setError(null);
                 try {
                     const response = await fetch(targetUrl);
@@ -409,11 +417,14 @@
                         throw new Error("Invalid JSON Format");
                     }
                     if (!Array.isArray(jsonData)) throw new Error("ไม่พบข้อมูล หรือ Format ผิด");
+                    
                     setCars(jsonData);
+                    localStorage.setItem('racer_fleet_cache', JSON.stringify(jsonData)); // Update Cache
                     setShowSettings(false);
                 } catch (error) {
                     console.error(error);
-                    setCars([]); 
+                    // Don't clear cars if we have cache, just show error
+                    if (cars.length === 0) setCars([]); 
                     setError(error.message);
                 } finally {
                     setLoading(false);
@@ -447,6 +458,7 @@
                             newCars = cars.map(c => c.plate === formData.originalPlate ? { plate: formData.plate, insurance_expire: formData.insurance_expire, tax_expire: formData.tax_expire } : c);
                         }
                         setCars(newCars);
+                        localStorage.setItem('racer_fleet_cache', JSON.stringify(newCars)); // Update Cache
                         setModalConfig(null); 
                     } else {
                         throw new Error(result.message || 'บันทึกไม่สำเร็จ');
@@ -473,6 +485,7 @@
                     if (result.status === 'success') {
                         const newCars = cars.filter(c => c.plate !== plate);
                         setCars(newCars);
+                        localStorage.setItem('racer_fleet_cache', JSON.stringify(newCars)); // Update Cache
                         setModalConfig(null);
                     } else {
                         throw new Error(result.message || 'ลบไม่สำเร็จ (ตรวจสอบ Script Version)');
@@ -485,6 +498,18 @@
             };
 
             useEffect(() => {
+                // Load from Cache first
+                const cachedData = localStorage.getItem('racer_fleet_cache');
+                if (cachedData) {
+                    try {
+                        const parsed = JSON.parse(cachedData);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            setCars(parsed);
+                        }
+                    } catch (e) { console.error("Cache error", e); }
+                }
+
+                // Fetch new data
                 if (APPS_SCRIPT_URL) fetchSheetData(APPS_SCRIPT_URL);
             }, []);
 
@@ -497,8 +522,15 @@
                     
                     <header className="p-6 flex justify-between items-center w-full max-w-7xl mx-auto relative z-10">
                         <div>
-                            <img src="logo.PNG" alt="Racer Logo" className="h-24 w-auto object-contain mb-1" />
-                            <p className="text-slate-500 text-xs font-medium uppercase tracking-widest pl-1">ระบบติดตามวันหมดอายุ</p>
+                            <img src="logo.jpg" alt="Racer Logo" className="h-16 w-auto object-contain mb-1 fade-in" />
+                            <div className="flex items-center gap-2">
+                                <p className="text-slate-500 text-xs font-medium uppercase tracking-widest pl-1">ระบบติดตามวันหมดอายุ</p>
+                                {loading && cars.length > 0 && (
+                                    <div className="flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-full text-[10px] text-blue-600 animate-pulse">
+                                        <Icons.RefreshCw size={10} className="animate-spin"/> อัปเดต...
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="flex gap-2">
                             <button onClick={() => setModalConfig({ mode: 'add', car: null })} className="p-2.5 bg-slate-900 text-white rounded-xl shadow-lg hover:bg-black transition active:scale-95 flex items-center gap-1">
@@ -508,8 +540,8 @@
                         </div>
                     </header>
 
-                    <main className="px-5 pb-10 w-full max-w-7xl mx-auto space-y-6 relative z-10 flex-1">
-                        {error && (
+                    <main className="px-5 pb-10 w-full max-w-7xl mx-auto space-y-6 relative z-10 flex-1 fade-in">
+                        {error && cars.length === 0 && (
                             <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center animate-in fade-in slide-in-from-top-4 max-w-lg mx-auto">
                                 <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.WifiOff size={32} className="text-red-500" /></div>
                                 <h3 className="text-lg font-bold text-red-700 mb-2">เชื่อมต่อไม่ได้</h3>
@@ -522,12 +554,12 @@
                             <div className="bg-white/80 backdrop-blur border border-slate-200 rounded-3xl p-8 text-center shadow-xl max-w-lg mx-auto">
                                 <div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce"><Icons.Database size={32} className="text-blue-500" /></div>
                                 <h3 className="text-xl font-bold text-slate-800 mb-2">พร้อมใช้งาน</h3>
-                                <p className="text-slate-500 text-sm mb-6">กดปุ่มด้านล่างเพื่อดึงข้อมูลล่าสุด</p>
+                                <p className="text-slate-500 text-sm mb-6">ยังไม่มีข้อมูลในแคช กดปุ่มด้านล่างเพื่อดึงข้อมูล</p>
                                 <button onClick={() => fetchSheetData()} className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold shadow-lg hover:bg-slate-900 transition">ดึงข้อมูลเดี๋ยวนี้</button>
                             </div>
                         )}
 
-                        {loading && (
+                        {loading && cars.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-20">
                                 <Icons.RefreshCw size={40} className="text-blue-600 animate-spin mb-4" />
                                 <p className="text-slate-500 font-medium">กำลังโหลดข้อมูล...</p>
@@ -591,4 +623,3 @@
     </script>
 </body>
 </html>
-
