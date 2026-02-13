@@ -24,8 +24,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         input[type="date"] { -webkit-appearance: none; appearance: none; min-height: 2.5rem; }
-        
-        /* Fade in animation */
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
@@ -50,6 +48,7 @@
             Car: (props) => <Icon {...props} path={<><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17h2"/><path d="M15 17h2"/></>} />,
             FileText: (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>} />,
             Database: (props) => <Icon {...props} path={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></>} />,
+            Shield: (props) => <Icon {...props} path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>} />,
             List: (props) => <Icon {...props} path={<><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></>} />,
             AlertCircle: (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />,
             Clock: (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />,
@@ -64,14 +63,22 @@
             CheckCircle: (props) => <Icon {...props} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />,
             Plus: (props) => <Icon {...props} path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />,
             Trash: (props) => <Icon {...props} path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>} />,
+            User: (props) => <Icon {...props} path={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />
         };
 
         // --- Logic ---
         const parseDate = (dateStr) => {
-            if (!dateStr) return null;
+            if (!dateStr || dateStr === "" || dateStr === "-") return null;
             if (dateStr instanceof Date) return dateStr;
             const str = String(dateStr).trim();
-            if (str.includes('/')) {
+            if (str.includes('-')) {
+                const parts = str.split('-');
+                if (parts.length === 3) {
+                    let year = parseInt(parts[0]);
+                    if (year > 2400) year -= 543; 
+                    return new Date(`${year}-${parts[1]}-${parts[2]}`);
+                }
+            } else if (str.includes('/')) {
                 const parts = str.split('/');
                 if (parts.length === 3) {
                     const day = parts[0].padStart(2, '0');
@@ -80,25 +87,31 @@
                     if (year > 2400) year -= 543; 
                     return new Date(`${year}-${month}-${day}`);
                 }
-            } else {
-                return new Date(str);
             }
-            return null;
+            return new Date(str);
         }
 
-        const getDaysRemaining = (dateStr) => {
-            const targetDate = parseDate(dateStr);
-            if (!targetDate || isNaN(targetDate.getTime())) return -99999;
+        const addOneYear = (dateObj) => {
+            if (!dateObj || isNaN(dateObj.getTime())) return null;
+            const newDate = new Date(dateObj);
+            newDate.setFullYear(newDate.getFullYear() + 1);
+            return newDate;
+        };
+
+        const getDaysRemainingFromDate = (targetDate) => {
+            if (!targetDate || isNaN(targetDate.getTime())) return null; 
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             targetDate.setHours(0, 0, 0, 0);
             return Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
         };
 
-        const formatDateThai = (dateStr) => {
-            const date = parseDate(dateStr);
-            if (!date || isNaN(date.getTime())) return String(dateStr);
-            return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+        const formatDateThaiFromDate = (date) => {
+            if (!date || isNaN(date.getTime())) return "-";
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear() + 543; 
+            return `${day}/${month}/${year}`;
         };
 
         const formatDateForInput = (dateStr) => {
@@ -107,57 +120,41 @@
             return date.toISOString().split('T')[0];
         };
 
+        const formatForSheet = (gregorianDateStr) => {
+            if(!gregorianDateStr) return "";
+            const parts = gregorianDateStr.split('-');
+            if(parts.length === 3) {
+                const year = parseInt(parts[0]); 
+                return `${parts[2]}/${parts[1]}/${year}`;
+            }
+            return gregorianDateStr;
+        };
+
         // --- Components ---
 
-        // 🔥 แก้ไข DashboardCard: แยกปุ่มกดเพื่อส่ง Tab ที่ต้องการ
         const DashboardCard = ({ title, iconName, expiredCount, warningCount, totalCount, type, onOpen }) => {
             const IconComp = Icons[iconName] || Icons.FileText;
-            
             const theme = {
-                insurance: { 
-                    gradient: "bg-gradient-to-r from-blue-600 to-indigo-600", 
-                    shadow: "shadow-blue-200", 
-                    iconBg: "bg-white/20",
-                    warningBox: "border-orange-500 bg-orange-500 text-white" 
-                },
-                tax: { 
-                    gradient: "bg-gradient-to-r from-green-500 to-emerald-600",
-                    shadow: "shadow-emerald-200", 
-                    iconBg: "bg-white/20",
-                    warningBox: "border-orange-500 bg-orange-500 text-white"
-                },
-                all: { 
-                    gradient: "bg-gradient-to-r from-slate-700 to-slate-800", 
-                    shadow: "shadow-slate-200", 
-                    iconBg: "bg-white/20" 
-                }
+                insurance: { gradient: "bg-gradient-to-r from-blue-600 to-indigo-600", shadow: "shadow-blue-200", iconBg: "bg-white/20", warningBox: "border-orange-500 bg-orange-500 text-white" },
+                act: { gradient: "bg-gradient-to-r from-teal-500 to-cyan-600", shadow: "shadow-cyan-200", iconBg: "bg-white/20", warningBox: "border-orange-500 bg-orange-500 text-white" },
+                tax: { gradient: "bg-gradient-to-r from-green-500 to-emerald-600", shadow: "shadow-emerald-200", iconBg: "bg-white/20", warningBox: "border-orange-500 bg-orange-500 text-white" },
+                all: { gradient: "bg-gradient-to-r from-slate-700 to-slate-800", shadow: "shadow-slate-200", iconBg: "bg-white/20" }
             }[type] || { gradient: "bg-gray-500", shadow: "", iconBg: "" }; 
 
-            // เปลี่ยนจาก button ใหญ่ เป็น div เพื่อแยกส่วน click
             return (
                 <div className={`relative w-full h-full min-h-[160px] overflow-hidden rounded-3xl shadow-xl ${theme.shadow} transition-all duration-300 transform hover:scale-[1.01] group bg-white border border-gray-100 flex flex-col`}>
-                    
-                    {/* Header - กดแล้วไปหน้า Default (หมดอายุ) */}
-                    <div 
-                        onClick={() => onOpen('expired')}
-                        className={`${theme.gradient} p-5 text-white relative overflow-hidden flex-1 cursor-pointer active:opacity-90 transition-opacity`}
-                    >
+                    <div onClick={() => onOpen('expired')} className={`${theme.gradient} p-5 text-white relative overflow-hidden flex-1 cursor-pointer active:opacity-90 transition-opacity`}>
                         <div className="relative z-10 flex justify-between items-start">
                             <div className="flex items-center gap-3">
-                                <div className={`p-2.5 rounded-xl backdrop-blur-md ${theme.iconBg} border border-white/20`}>
-                                    <IconComp size={26} className="text-white" />
-                                </div>
+                                <div className={`p-2.5 rounded-xl backdrop-blur-md ${theme.iconBg} border border-white/20`}><IconComp size={26} className="text-white" /></div>
                                 <div className="text-left">
                                     <h3 className="text-lg font-bold tracking-wide opacity-95">{title}</h3>
                                     <p className="text-xs text-white/80 font-light">แตะเพื่อดูรายละเอียด</p>
                                 </div>
                             </div>
-                            <div className="bg-white/20 p-1.5 rounded-full backdrop-blur-sm">
-                                <Icons.ChevronRight size={18} className="text-white" />
-                            </div>
+                            <div className="bg-white/20 p-1.5 rounded-full backdrop-blur-sm"><Icons.ChevronRight size={18} className="text-white" /></div>
                         </div>
                     </div>
-
                     <div className="p-5">
                         {type === 'all' ? (
                             <div onClick={() => onOpen('all')} className="flex items-center justify-between cursor-pointer">
@@ -165,32 +162,17 @@
                                     <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">จำนวนรถทั้งหมด</p>
                                     <p className="text-5xl font-black text-slate-700 tracking-tighter">{totalCount}</p>
                                 </div>
-                                <div className="absolute right-4 bottom-4 text-slate-100 opacity-20 transform -rotate-12 scale-150">
-                                    <Icons.Car size={100} />
-                                </div>
+                                <div className="absolute right-4 bottom-4 text-slate-100 opacity-20 transform -rotate-12 scale-150"><Icons.Car size={100} /></div>
                             </div>
                         ) : (
                             <div className="flex gap-4">
-                                {/* กล่องหมดอายุ (แดง) - กดแล้วส่ง tab='expired' */}
-                                <button 
-                                    onClick={() => onOpen('expired')}
-                                    className={`flex-1 rounded-2xl p-3 border border-red-100 bg-red-50 relative overflow-hidden text-left hover:shadow-md transition-all active:scale-95`}
-                                >
+                                <button onClick={() => onOpen('expired')} className={`flex-1 rounded-2xl p-3 border border-red-100 bg-red-50 relative overflow-hidden text-left hover:shadow-md transition-all active:scale-95`}>
                                     {expiredCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>}
-                                    <div className="flex items-center gap-1.5 mb-1 text-red-600 text-xs font-bold uppercase tracking-wide">
-                                        <Icons.AlertCircle size={12} /> หมดอายุ
-                                    </div>
+                                    <div className="flex items-center gap-1.5 mb-1 text-red-600 text-xs font-bold uppercase tracking-wide"><Icons.AlertCircle size={12} /> หมดอายุ</div>
                                     <p className={`text-3xl font-black ${expiredCount > 0 ? 'text-red-600' : 'text-gray-300'}`}>{expiredCount}</p>
                                 </button>
-
-                                {/* กล่องใกล้หมด (ส้ม) - กดแล้วส่ง tab='warning' */}
-                                <button 
-                                    onClick={() => onOpen('warning')}
-                                    className={`flex-1 rounded-2xl p-3 border ${theme.warningBox} text-left hover:shadow-md transition-all active:scale-95`}
-                                >
-                                    <div className="flex items-center gap-1.5 mb-1 font-bold text-xs uppercase tracking-wide opacity-90 text-white">
-                                        <Icons.Clock size={12} /> ใกล้หมด
-                                    </div>
+                                <button onClick={() => onOpen('warning')} className={`flex-1 rounded-2xl p-3 border ${theme.warningBox} text-left hover:shadow-md transition-all active:scale-95`}>
+                                    <div className="flex items-center gap-1.5 mb-1 font-bold text-xs uppercase tracking-wide opacity-90 text-white"><Icons.Clock size={12} /> ใกล้หมด</div>
                                     <p className="text-3xl font-black text-white">{warningCount}</p>
                                 </button>
                             </div>
@@ -203,8 +185,9 @@
         const CarFormModal = ({ car, mode, onClose, onSave, onDelete, isSaving }) => {
             const [formData, setFormData] = useState({
                 plate: car ? car.plate : '',
-                insurance_expire: car ? formatDateForInput(car.insurance_expire) : '',
-                tax_expire: car ? formatDateForInput(car.tax_expire) : ''
+                tax_expire: car ? formatDateForInput(car.tax_expire) : '',
+                act_expire: car ? formatDateForInput(car.act_expire) : '',
+                insurance_expire: car ? formatDateForInput(car.insurance_expire) : ''
             });
 
             const handleSubmit = (e) => {
@@ -213,49 +196,42 @@
             };
 
             const handleDelete = () => {
-                if(confirm(`ยืนยันการลบรถทะเบียน "${car.plate}" ?`)) {
-                    onDelete(car.plate);
-                }
+                if(confirm(`ยืนยันการลบรถทะเบียน "${car.plate}" ออกจากระบบ?`)) onDelete(car.plate);
             };
 
             return (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 overflow-hidden">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-                    
-                    <div className="bg-white rounded-2xl w-[90%] max-w-sm p-5 md:p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-2xl w-[90%] max-w-sm p-5 md:p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-bold">{mode === 'add' ? 'เพิ่มรถใหม่' : 'แก้ไขข้อมูล'}</h3>
                             {mode === 'edit' && (
-                                <button type="button" onClick={handleDelete} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition border border-red-200 shadow-sm" title="ลบรถคันนี้">
-                                    <Icons.Trash size={18} />
-                                </button>
+                                <button type="button" onClick={handleDelete} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition border border-red-200 shadow-sm" title="ลบรถคันนี้"><Icons.Trash size={18} /></button>
                             )}
                         </div>
-                        
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1">ทะเบียนรถ</label>
-                                <input 
-                                    type="text" 
-                                    required 
-                                    disabled={mode === 'edit'} 
-                                    className={`w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm ${mode === 'edit' ? 'text-gray-500 cursor-not-allowed bg-gray-50' : ''}`}
-                                    value={formData.plate} 
-                                    onChange={e => setFormData({...formData, plate: e.target.value})} 
-                                    placeholder="เช่น 1กข 1234"
-                                />
+                                <input type="text" required disabled={mode === 'edit'} className={`w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm ${mode === 'edit' ? 'text-gray-500 cursor-not-allowed bg-gray-50' : ''}`} value={formData.plate} onChange={e => setFormData({...formData, plate: e.target.value})} placeholder="เช่น 1กข 1234" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">วันหมดอายุ ประกันภัย</label>
+                                <label className="block text-xs font-bold text-green-600 uppercase mb-1">วันหมดอายุ ภาษีรถยนต์</label>
                                 <div className="relative">
-                                    <input type="date" required className="w-full p-2.5 pl-10 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" value={formData.insurance_expire} onChange={e => setFormData({...formData, insurance_expire: e.target.value})} />
+                                    <input type="date" className="w-full p-2.5 pl-10 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm" value={formData.tax_expire} onChange={e => setFormData({...formData, tax_expire: e.target.value})} />
                                     <div className="absolute left-3 top-2.5 text-slate-400"><Icons.Calendar size={18}/></div>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">วันหมดอายุ ภาษี</label>
+                                <label className="block text-xs font-bold text-teal-600 uppercase mb-1">วันเริ่มคุ้มครอง พ.ร.บ.</label>
                                 <div className="relative">
-                                    <input type="date" required className="w-full p-2.5 pl-10 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none text-sm" value={formData.tax_expire} onChange={e => setFormData({...formData, tax_expire: e.target.value})} />
+                                    <input type="date" className="w-full p-2.5 pl-10 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none text-sm" value={formData.act_expire} onChange={e => setFormData({...formData, act_expire: e.target.value})} />
+                                    <div className="absolute left-3 top-2.5 text-slate-400"><Icons.Calendar size={18}/></div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-blue-600 uppercase mb-1">วันเริ่มคุ้มครอง ประกันภัย</label>
+                                <div className="relative">
+                                    <input type="date" className="w-full p-2.5 pl-10 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" value={formData.insurance_expire} onChange={e => setFormData({...formData, insurance_expire: e.target.value})} />
                                     <div className="absolute left-3 top-2.5 text-slate-400"><Icons.Calendar size={18}/></div>
                                 </div>
                             </div>
@@ -263,7 +239,7 @@
                                 <button type="button" onClick={onClose} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition">ยกเลิก</button>
                                 <button type="submit" disabled={isSaving} className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-black transition flex items-center justify-center gap-2 disabled:opacity-70">
                                     {isSaving ? <Icons.RefreshCw className="animate-spin" size={18}/> : <Icons.Save size={18}/>}
-                                    {isSaving ? 'บันทึก' : 'บันทึก'}
+                                    {isSaving ? 'บันทึก...' : 'บันทึก'}
                                 </button>
                             </div>
                         </form>
@@ -273,96 +249,105 @@
         };
 
         const DetailModal = ({ category, initialTab, data, allCarsData, onClose, onEditCar }) => {
-            // 🔥 รับค่า initialTab มาใช้เป็นค่าเริ่มต้น
             const [activeTab, setActiveTab] = useState(initialTab || 'expired');
             const [searchTerm, setSearchTerm] = useState("");
-            const themeBg = category === 'insurance' ? 'bg-blue-600' : category === 'tax' ? 'bg-emerald-600' : 'bg-slate-700';
+            const themeBg = category === 'insurance' ? 'bg-blue-600' : category === 'act' ? 'bg-teal-600' : category === 'tax' ? 'bg-emerald-600' : 'bg-slate-700';
 
-            if (category === 'all') {
-                const filteredAll = allCarsData.filter(c => c.plate.toLowerCase().includes(searchTerm.toLowerCase()));
+            const StatusBadge = ({ label, expireDate, days, icon }) => {
+                let bgClass = "bg-gray-50 border-gray-200 text-gray-500";
+                let text = "ไม่มีข้อมูล";
+                let tagClass = "hidden";
+
+                if (days !== null) {
+                    if (days < 0) { 
+                        bgClass = "bg-red-50 border-red-200 text-red-700"; 
+                        text = "หมดแล้ว!"; 
+                        tagClass = "bg-red-500 text-white shadow-sm";
+                    }
+                    else if (days <= 30) { 
+                        bgClass = "bg-orange-50 border-orange-200 text-orange-700"; 
+                        text = `เหลือ ${days} ว.`; 
+                        tagClass = "bg-orange-500 text-white shadow-sm";
+                    }
+                    else { 
+                        bgClass = "bg-emerald-50 border-emerald-200 text-emerald-700"; 
+                        text = `เหลือ ${days} ว.`; 
+                        tagClass = "bg-emerald-100 text-emerald-800";
+                    }
+                }
+
                 return (
-                    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-                        <div className="bg-white/95 backdrop-blur-xl w-full md:max-w-5xl h-[90vh] md:h-[85vh] rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden relative z-10 transition-transform animate-in slide-in-from-bottom duration-300">
-                            <div className="p-5 bg-white border-b border-gray-100 flex justify-between items-center sticky top-0 z-10 shadow-sm">
-                                <div>
-                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Icons.List className="text-slate-600"/> รายการรถทั้งหมด</h2>
-                                    <p className="text-xs text-slate-400 mt-1">จำนวน {allCarsData.length} คัน</p>
-                                </div>
-                                <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition"><Icons.X size={20} className="text-slate-600"/></button>
-                            </div>
-                            <div className="p-4 bg-slate-50 border-b border-slate-100">
-                                <div className="relative max-w-md mx-auto md:mx-0">
-                                    <div className="absolute left-3 top-3 text-gray-400"><Icons.Search size={16} /></div>
-                                    <input type="text" placeholder="ค้นหาในรายการนี้..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-slate-400 text-sm bg-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                                </div>
-                            </div>
-                            <div className="overflow-y-auto flex-1 p-4 bg-slate-50/50">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
-                                    {filteredAll.map((car, index) => {
-                                        const insDays = getDaysRemaining(car.insurance_expire);
-                                        const taxDays = getDaysRemaining(car.tax_expire);
-                                        return (
-                                            <div key={index} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center hover:shadow-md transition-shadow">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="bg-slate-100 p-2 rounded-lg text-slate-500"><Icons.Car size={20} /></div>
-                                                    <div>
-                                                        <div className="font-bold text-gray-800 text-base">{car.plate}</div>
-                                                        <div className="flex gap-2 text-[10px] uppercase font-bold tracking-wider text-gray-400 mt-0.5">
-                                                            <span className={insDays < 0 ? "text-red-500" : ""}>ประกัน {formatDateThai(car.insurance_expire)}</span>
-                                                            <span>•</span>
-                                                            <span className={taxDays < 0 ? "text-red-500" : ""}>ภาษี {formatDateThai(car.tax_expire)}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <button onClick={() => onEditCar(car)} className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"><Icons.Edit3 size={16}/></button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                    <div className={`flex-1 flex justify-between items-center p-2 rounded-xl border ${bgClass}`}>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] uppercase font-bold flex items-center gap-1 opacity-70">{icon} {label}</span>
+                            <span className="text-sm font-bold mt-0.5">{formatDateThaiFromDate(expireDate)}</span>
                         </div>
+                        {days !== null && (
+                            <div className={`text-[10px] font-black px-2 py-1 rounded-lg ${tagClass}`}>
+                                {text}
+                            </div>
+                        )}
                     </div>
                 );
+            };
+
+            // 🔥 Unified logic: Use pre-calculated 'allCarsData' for both modes
+            // This ensures +1 year logic and calculated days are consistent everywhere
+            let sourceData = [];
+            
+            if (category === 'all') {
+                sourceData = allCarsData;
+            } else {
+                // Filter allCarsData based on category specific logic
+                sourceData = allCarsData.filter(d => {
+                    let days = null;
+                    if (category === 'insurance') days = d.insDays;
+                    else if (category === 'act') days = d.actDays;
+                    else if (category === 'tax') days = d.taxDays;
+                    
+                    if (activeTab === 'expired') return days !== null && days < 0;
+                    if (activeTab === 'warning') return days !== null && days >= 0 && days <= 30;
+                    return false;
+                });
             }
 
-            const safeData = data || [];
-            const expiredList = safeData.filter(d => d.days < 0);
-            const warningList = safeData.filter(d => d.days >= 0 && d.days <= 30);
-            const currentList = (activeTab === 'expired' ? expiredList : warningList).filter(item => item.plate.toLowerCase().includes(searchTerm.toLowerCase()));
-            const getThemeTitle = () => category === 'insurance' ? 'ประกันภัยรถยนต์' : 'ภาษีรถยนต์';
-            const IconTitle = category === 'insurance' ? Icons.FileText : Icons.Database;
+            const currentList = sourceData.filter(item => item.plate.toLowerCase().includes(searchTerm.toLowerCase()));
+
+            const getThemeTitle = () => category === 'insurance' ? 'ประกันภัยรถยนต์' : category === 'act' ? 'พ.ร.บ. คุ้มครอง' : category === 'tax' ? 'ภาษีรถยนต์' : 'รายการรถทั้งหมด';
+            const IconTitle = category === 'insurance' ? Icons.FileText : category === 'act' ? Icons.Shield : category === 'tax' ? Icons.Database : Icons.List;
 
             return (
                 <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-                    <div className="bg-white/95 backdrop-blur-xl w-full md:max-w-5xl h-[90vh] md:h-[85vh] rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden relative z-10 transition-transform animate-in slide-in-from-bottom duration-300">
-                        <div className={`p-6 pb-8 text-white ${themeBg} relative overflow-hidden shadow-lg`}>
+                    <div className="bg-white/95 backdrop-blur-xl w-full md:max-w-4xl h-[90vh] md:h-[85vh] rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden relative z-10 transition-transform animate-in slide-in-from-bottom duration-300">
+                        <div className={`p-5 md:p-6 pb-6 md:pb-8 text-white ${themeBg} relative overflow-hidden shadow-lg shrink-0`}>
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl"></div>
                             <div className="relative z-10 flex justify-between items-center">
                                 <div>
-                                    <h2 className="text-2xl font-black flex items-center gap-2 tracking-tight">
-                                        <IconTitle size={24}/> {getThemeTitle()}
-                                    </h2>
-                                    <p className="text-white/80 text-sm font-light mt-1">จัดการข้อมูลและวันหมดอายุ</p>
+                                    <h2 className="text-xl md:text-2xl font-black flex items-center gap-2 tracking-tight"><IconTitle size={24}/> {getThemeTitle()}</h2>
+                                    <p className="text-white/80 text-xs md:text-sm font-light mt-1">จำนวน {currentList.length} คัน</p>
                                 </div>
                                 <button onClick={onClose} className="p-2 bg-white/20 backdrop-blur-md rounded-full hover:bg-white/30 transition shadow-inner"><Icons.X size={20} /></button>
                             </div>
                         </div>
-                        <div className="px-4 -mt-6 relative z-20 space-y-3">
-                            <div className="bg-white p-1.5 rounded-xl shadow-lg border border-gray-100 flex max-w-md mx-auto md:mx-0">
-                                <button onClick={() => setActiveTab('expired')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'expired' ? 'bg-red-50 text-red-600 shadow-sm ring-1 ring-red-100' : 'text-gray-400 hover:bg-gray-50'}`}>
-                                    <Icons.AlertCircle size={16} className={activeTab === 'expired' ? 'animate-pulse' : ''} /> หมดอายุ <span className="bg-white px-1.5 rounded text-xs ml-1 shadow-sm border">{expiredList.length}</span>
-                                </button>
-                                <button onClick={() => setActiveTab('warning')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'warning' ? 'bg-orange-500 text-white shadow-sm ring-1 ring-orange-600' : 'text-gray-400 hover:bg-gray-50'}`}>
-                                    <Icons.Clock size={16} /> ใกล้หมด <span className="bg-white px-1.5 rounded text-xs ml-1 shadow-sm border">{warningList.length}</span>
-                                </button>
-                            </div>
-                            <div className="relative shadow-sm rounded-xl max-w-md mx-auto md:mx-0">
+
+                        <div className="px-4 -mt-5 relative z-20 space-y-3 shrink-0">
+                            {category !== 'all' && (
+                                <div className="bg-white p-1.5 rounded-xl shadow-lg border border-gray-100 flex">
+                                    <button onClick={() => setActiveTab('expired')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'expired' ? 'bg-red-50 text-red-600 shadow-sm ring-1 ring-red-100' : 'text-gray-400 hover:bg-gray-50'}`}>
+                                        <Icons.AlertCircle size={16} className={activeTab === 'expired' ? 'animate-pulse' : ''} /> หมดอายุ
+                                    </button>
+                                    <button onClick={() => setActiveTab('warning')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'warning' ? 'bg-orange-500 text-white shadow-sm ring-1 ring-orange-600' : 'text-gray-400 hover:bg-gray-50'}`}>
+                                        <Icons.Clock size={16} /> ใกล้หมด
+                                    </button>
+                                </div>
+                            )}
+                            <div className="relative shadow-sm rounded-xl">
                                 <div className="absolute left-3 top-3 text-gray-400"><Icons.Search size={16} /></div>
-                                <input type="text" placeholder="ค้นหาในรายการนี้..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-slate-300 text-sm bg-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                <input type="text" placeholder="ค้นหาทะเบียน..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-slate-300 text-sm bg-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
                         </div>
+
                         <div className="overflow-y-auto flex-1 p-4 bg-slate-50/50">
                             {currentList.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-48 text-gray-300">
@@ -370,19 +355,53 @@
                                     <p>ไม่พบรายการ</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
-                                    {currentList.map((item, index) => (
-                                        <div key={index} className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl flex justify-between items-center hover:shadow-lg transition-all duration-300 border border-white">
-                                            <div>
-                                                <div className="flex items-center gap-2"><span className="text-lg font-black text-slate-700 tracking-tight">{item.plate}</span></div>
-                                                <div className="text-sm text-gray-500 flex items-center gap-1 mt-1"><span className="font-medium bg-gray-100 px-2 py-0.5 rounded text-xs">{formatDateThai(item.expireDate)}</span></div>
+                                <div className="flex flex-col gap-4 pb-20">
+                                    {currentList.map((car, index) => {
+                                        return (
+                                            <div key={index} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col md:flex-row gap-4">
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="bg-slate-800 w-12 h-12 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-inner shrink-0 hidden sm:flex">
+                                                                {car.no || <Icons.Car size={24}/>}
+                                                            </div>
+                                                            <div>
+                                                                <div className="flex flex-wrap items-center gap-3 mb-1">
+                                                                    <span className="text-2xl font-black text-slate-900 tracking-tight">
+                                                                        {car.plate}
+                                                                    </span>
+                                                                    {car.usage && car.usage !== "-" && (
+                                                                        <span className="bg-blue-100 text-blue-700 text-sm font-bold px-3 py-1 rounded-lg tracking-wide border border-blue-200 shadow-sm flex items-center gap-1">
+                                                                            <Icons.User size={14}/> {car.usage}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500 font-medium mt-1">
+                                                                    <span className="text-gray-400">ยี่ห้อ:</span> {car.brand} 
+                                                                    <span className="mx-2 text-gray-300">|</span> 
+                                                                    <span className="text-gray-400">ลักษณะ:</span> {car.desc}
+                                                                    <span className="mx-2 text-gray-300">|</span> 
+                                                                    <span className="text-gray-400">สังกัด:</span> {car.department}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={() => onEditCar(car)} className="p-2 text-gray-400 hover:text-blue-600 bg-gray-50 rounded-lg border border-gray-200 transition md:hidden">
+                                                            <Icons.Edit3 size={16}/>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col sm:flex-row md:flex-col gap-2 w-full md:w-56 shrink-0 mt-3 md:mt-0">
+                                                    <StatusBadge label="วันสิ้นสุด ภาษี" expireDate={car.taxDateObj} days={car.taxDays} icon={<Icons.Database size={12}/>} />
+                                                    <StatusBadge label="วันสิ้นสุด พ.ร.บ." expireDate={car.actExpireDateObj} days={car.actDays} icon={<Icons.Shield size={12}/>} />
+                                                    <StatusBadge label="วันสิ้นสุด ประกัน" expireDate={car.insExpireDateObj} days={car.insDays} icon={<Icons.FileText size={12}/>} />
+                                                    <button onClick={() => onEditCar(car)} className="mt-1 p-2 text-gray-600 hover:text-white hover:bg-slate-800 bg-gray-100 rounded-lg border border-gray-200 transition hidden md:flex items-center justify-center gap-2">
+                                                        <Icons.Edit3 size={16}/> <span className="text-xs font-bold">แก้ไขข้อมูล</span>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm border ${item.days < 0 ? 'bg-red-500 text-white border-red-400' : 'bg-orange-500 text-white border-orange-600'}`}>{item.days < 0 ? `เกิน ${Math.abs(item.days)} วัน` : `เหลือ ${item.days} วัน`}</div>
-                                                <button onClick={() => onEditCar(allCarsData.find(c => c.plate === item.plate))} className="p-2 text-gray-400 hover:text-blue-600 bg-white rounded-lg border border-gray-200"><Icons.Edit3 size={16}/></button>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -393,7 +412,7 @@
 
         const App = () => {
             const [cars, setCars] = useState([]); 
-            const [selectedCategory, setSelectedCategory] = useState(null); // { id: 'insurance', tab: 'expired' }
+            const [selectedCategory, setSelectedCategory] = useState(null); 
             const [showSettings, setShowSettings] = useState(false);
             const [scriptUrl, setScriptUrl] = useState(APPS_SCRIPT_URL);
             const [loading, setLoading] = useState(false);
@@ -401,83 +420,106 @@
             const [modalConfig, setModalConfig] = useState(null);
             const [isSaving, setIsSaving] = useState(false);
 
-            const stats = useMemo(() => {
-                const insuranceData = cars.map(c => ({ plate: c.plate, expireDate: c.insurance_expire, days: getDaysRemaining(c.insurance_expire) }));
-                const taxData = cars.map(c => ({ plate: c.plate, expireDate: c.tax_expire, days: getDaysRemaining(c.tax_expire) }));
-                return {
-                    insurance: { expired: insuranceData.filter(d => d.days < 0).length, warning: insuranceData.filter(d => d.days >= 0 && d.days <= 30).length, data: insuranceData },
-                    tax: { expired: taxData.filter(d => d.days < 0).length, warning: taxData.filter(d => d.days >= 0 && d.days <= 30).length, data: taxData }
-                };
+            // 🔥 Logic Calculation Here: Pre-calculate everything
+            const processedCars = useMemo(() => {
+                return cars.map(c => {
+                    const taxDateObj = parseDate(c.tax_expire);
+                    const actStartDateObj = parseDate(c.act_expire);
+                    const actExpireDateObj = addOneYear(actStartDateObj);
+                    const insStartDateObj = parseDate(c.insurance_expire);
+                    const insExpireDateObj = addOneYear(insStartDateObj);
+
+                    return {
+                        ...c,
+                        taxDateObj,
+                        actExpireDateObj,
+                        insExpireDateObj,
+                        taxDays: getDaysRemainingFromDate(taxDateObj),
+                        actDays: getDaysRemainingFromDate(actExpireDateObj),
+                        insDays: getDaysRemainingFromDate(insExpireDateObj)
+                    };
+                });
             }, [cars]);
+
+            const stats = useMemo(() => {
+                return {
+                    insurance: { 
+                        expired: processedCars.filter(d => d.insDays !== null && d.insDays < 0).length, 
+                        warning: processedCars.filter(d => d.insDays !== null && d.insDays >= 0 && d.insDays <= 30).length, 
+                        data: processedCars 
+                    },
+                    act: { 
+                        expired: processedCars.filter(d => d.actDays !== null && d.actDays < 0).length, 
+                        warning: processedCars.filter(d => d.actDays !== null && d.actDays >= 0 && d.actDays <= 30).length, 
+                        data: processedCars 
+                    },
+                    tax: { 
+                        expired: processedCars.filter(d => d.taxDays !== null && d.taxDays < 0).length, 
+                        warning: processedCars.filter(d => d.taxDays !== null && d.taxDays >= 0 && d.taxDays <= 30).length, 
+                        data: processedCars 
+                    }
+                };
+            }, [processedCars]);
 
             const fetchSheetData = async (url) => {
                 const targetUrl = url || scriptUrl;
                 if (!targetUrl) return;
                 
                 if (cars.length === 0) setLoading(true);
-                
                 setError(null);
                 try {
                     const response = await fetch(targetUrl);
                     if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                     let jsonData;
                     try { jsonData = await response.json(); } 
-                    catch (jsonErr) { 
-                        const text = await response.text();
-                        if (text.includes("<!DOCTYPE html>")) throw new Error("Permission Denied (ตั้งค่า Deploy เป็น Anyone)");
-                        throw new Error("Invalid JSON Format");
-                    }
+                    catch (jsonErr) { throw new Error("Permission Denied (ตั้งค่า Deploy เป็น Anyone)"); }
                     if (!Array.isArray(jsonData)) throw new Error("ไม่พบข้อมูล หรือ Format ผิด");
                     
                     setCars(jsonData);
                     localStorage.setItem('racer_fleet_cache', JSON.stringify(jsonData)); 
                     setShowSettings(false);
                 } catch (error) {
-                    console.error(error);
                     if (cars.length === 0) setCars([]); 
                     setError(error.message);
-                } finally {
-                    setLoading(false);
-                }
+                } finally { setLoading(false); }
             };
 
             const handleSaveCar = async (formData) => {
                 if (!scriptUrl) return;
                 setIsSaving(true);
                 const mode = modalConfig.mode;
-                const payload = {
+                
+                const payload = { 
                     action: mode, 
-                    plate: formData.plate,
-                    insurance_expire: formData.insurance_expire,
-                    tax_expire: formData.tax_expire
+                    plate: formData.plate, 
+                    insurance_expire: formatForSheet(formData.insurance_expire), 
+                    tax_expire: formatForSheet(formData.tax_expire), 
+                    act_expire: formatForSheet(formData.act_expire) 
                 };
 
                 try {
                     const response = await fetch(scriptUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payload)
+                        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload)
                     });
                     const result = await response.json();
                     
                     if (result.status === 'success') {
                         let newCars;
+                        const newCarTemplate = { 
+                            no: cars.length + 1, plate: formData.plate, brand: "-", type: "-", desc: "-", 
+                            owner: "-", department: "-", usage: "-", 
+                            insurance_expire: payload.insurance_expire, tax_expire: payload.tax_expire, act_expire: payload.act_expire 
+                        };
                         if (mode === 'add') {
-                            newCars = [...cars, { plate: formData.plate, insurance_expire: formData.insurance_expire, tax_expire: formData.tax_expire }];
+                            newCars = [...cars, newCarTemplate];
                         } else {
-                            newCars = cars.map(c => c.plate === formData.originalPlate ? { plate: formData.plate, insurance_expire: formData.insurance_expire, tax_expire: formData.tax_expire } : c);
+                            newCars = cars.map(c => c.plate === formData.originalPlate ? { ...c, plate: formData.plate, insurance_expire: payload.insurance_expire, tax_expire: payload.tax_expire, act_expire: payload.act_expire } : c);
                         }
                         setCars(newCars);
                         localStorage.setItem('racer_fleet_cache', JSON.stringify(newCars)); 
                         setModalConfig(null); 
-                    } else {
-                        throw new Error(result.message || 'บันทึกไม่สำเร็จ');
-                    }
-                } catch (err) {
-                    alert("เกิดข้อผิดพลาด: " + err.message);
-                } finally {
-                    setIsSaving(false);
-                }
+                    } else { throw new Error(result.message || 'บันทึกไม่สำเร็จ'); }
+                } catch (err) { alert("เกิดข้อผิดพลาด: " + err.message); } finally { setIsSaving(false); }
             };
 
             const handleDeleteCar = async (plate) => {
@@ -485,26 +527,16 @@
                 setIsSaving(true);
                 try {
                     const response = await fetch(scriptUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'delete', plate: plate })
+                        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'delete', plate: plate })
                     });
-                    
                     const result = await response.json();
-                    
                     if (result.status === 'success') {
                         const newCars = cars.filter(c => c.plate !== plate);
                         setCars(newCars);
                         localStorage.setItem('racer_fleet_cache', JSON.stringify(newCars)); 
                         setModalConfig(null);
-                    } else {
-                        throw new Error(result.message || 'ลบไม่สำเร็จ (ตรวจสอบ Script Version)');
-                    }
-                } catch (err) {
-                    alert("ลบไม่สำเร็จ: " + err.message);
-                } finally {
-                    setIsSaving(false);
-                }
+                    } else { throw new Error(result.message || 'ลบไม่สำเร็จ'); }
+                } catch (err) { alert("ลบไม่สำเร็จ: " + err.message); } finally { setIsSaving(false); }
             };
 
             useEffect(() => {
@@ -512,12 +544,9 @@
                 if (cachedData) {
                     try {
                         const parsed = JSON.parse(cachedData);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            setCars(parsed);
-                        }
-                    } catch (e) { console.error("Cache error", e); }
+                        if (Array.isArray(parsed) && parsed.length > 0) setCars(parsed);
+                    } catch (e) {}
                 }
-
                 if (APPS_SCRIPT_URL) fetchSheetData(APPS_SCRIPT_URL);
             }, []);
 
@@ -530,7 +559,7 @@
                     
                     <header className="p-6 flex justify-between items-center w-full max-w-7xl mx-auto relative z-10">
                         <div>
-                            <img src="logo.PNG" alt="Racer Logo" className="h-20 w-auto object-contain mb-1 fade-in" />
+                            <img src="logo.jpg" alt="Racer Logo" className="h-16 w-auto object-contain mb-1 fade-in" />
                             <div className="flex items-center gap-2">
                                 <p className="text-slate-500 text-xs font-medium uppercase tracking-widest pl-1">ระบบติดตามวันหมดอายุ</p>
                                 {loading && cars.length > 0 && (
@@ -575,55 +604,26 @@
                         )}
 
                         {cars.length > 0 && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <DashboardCard 
-                                    title="ประกันภัยรถยนต์" 
-                                    iconName="FileText" 
-                                    expiredCount={stats.insurance.expired} 
-                                    warningCount={stats.insurance.warning} 
-                                    totalCount={cars.length} 
-                                    type="insurance" 
-                                    onOpen={(tab) => setSelectedCategory({ id: 'insurance', tab: tab })} 
-                                />
-                                <DashboardCard 
-                                    title="ภาษีรถยนต์" 
-                                    iconName="Database" 
-                                    expiredCount={stats.tax.expired} 
-                                    warningCount={stats.tax.warning} 
-                                    totalCount={cars.length} 
-                                    type="tax" 
-                                    onOpen={(tab) => setSelectedCategory({ id: 'tax', tab: tab })} 
-                                />
-                                <DashboardCard 
-                                    title="รายการทั้งหมด" 
-                                    iconName="List" 
-                                    totalCount={cars.length} 
-                                    type="all" 
-                                    onOpen={() => setSelectedCategory({ id: 'all', tab: 'expired' })} 
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <DashboardCard title="ภาษีรถยนต์" iconName="Database" expiredCount={stats.tax.expired} warningCount={stats.tax.warning} totalCount={cars.length} type="tax" onOpen={(tab) => setSelectedCategory({ id: 'tax', tab: tab })} />
+                                <DashboardCard title="พ.ร.บ. คุ้มครอง" iconName="Shield" expiredCount={stats.act.expired} warningCount={stats.act.warning} totalCount={cars.length} type="act" onOpen={(tab) => setSelectedCategory({ id: 'act', tab: tab })} />
+                                <DashboardCard title="ประกันภัยรถยนต์" iconName="FileText" expiredCount={stats.insurance.expired} warningCount={stats.insurance.warning} totalCount={cars.length} type="insurance" onOpen={(tab) => setSelectedCategory({ id: 'insurance', tab: tab })} />
+                                <DashboardCard title="รายการทั้งหมด" iconName="List" totalCount={cars.length} type="all" onOpen={() => setSelectedCategory({ id: 'all', tab: 'expired' })} />
                             </div>
                         )}
                     </main>
 
                     {selectedCategory && (
                         <DetailModal 
-                            category={selectedCategory.id}
-                            initialTab={selectedCategory.tab}
-                            data={selectedCategory.id !== 'all' ? stats[selectedCategory.id].data : []}
-                            allCarsData={cars}
-                            onClose={() => setSelectedCategory(null)}
-                            onEditCar={(car) => setModalConfig({ mode: 'edit', car: car })} 
+                            category={selectedCategory.id} initialTab={selectedCategory.tab} data={selectedCategory.id !== 'all' ? stats[selectedCategory.id].data : []}
+                            allCarsData={processedCars} onClose={() => setSelectedCategory(null)} onEditCar={(car) => setModalConfig({ mode: 'edit', car: car })} 
                         />
                     )}
 
                     {modalConfig && (
                         <CarFormModal 
-                            car={modalConfig.car} 
-                            mode={modalConfig.mode}
-                            onClose={() => setModalConfig(null)} 
-                            onSave={handleSaveCar}
-                            onDelete={handleDeleteCar}
-                            isSaving={isSaving}
+                            car={modalConfig.car} mode={modalConfig.mode} onClose={() => setModalConfig(null)} 
+                            onSave={handleSaveCar} onDelete={handleDeleteCar} isSaving={isSaving}
                         />
                     )}
 
@@ -635,7 +635,7 @@
                                 <div className="space-y-4">
                                     <div>
                                         <label className="text-xs font-bold text-gray-400 mb-2 block uppercase tracking-wide">Google Apps Script URL</label>
-                                        <input value={scriptUrl} onChange={(e) => setScriptUrl(e.target.value)} className="w-full border p-3 rounded-xl text-sm mb-3 focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 text-slate-600" placeholder="https://script.google.com/..." />
+                                        <input value={scriptUrl} onChange={(e) => setScriptUrl(e.target.value)} className="w-full border p-3 rounded-xl text-sm mb-3 focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 text-slate-600" />
                                         <button onClick={() => fetchSheetData()} disabled={loading} className="w-full bg-slate-800 text-white p-3 rounded-xl text-sm font-bold hover:bg-slate-900 transition shadow-lg shadow-slate-200 flex items-center justify-center gap-2">
                                             {loading ? <Icons.RefreshCw size={16} className="animate-spin"/> : 'เชื่อมต่อใหม่'}
                                         </button>
@@ -654,4 +654,3 @@
     </script>
 </body>
 </html>
-
